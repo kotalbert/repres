@@ -1,0 +1,3 @@
+[submodule "RepData_PeerAssessment1"]
+	path = RepData_PeerAssessment1
+	url = https://github.com/polde-live/RepData_PeerAssessment1.git
