@@ -36,40 +36,35 @@ if(!exists("storm"))
 # 1. Across the United States, which types of events (as indicated in the EVTYPE 
 # variable) are most harmful with respect to population health?
 
-# 2. Across the United States, which types of events have the greatest economic 
-# consequences?
-
 # Using dplyr for data transformation and agregation
 library(dplyr)
 storm <- tbl_df(storm)
 
-storm_fat <- storm %>%
-    mutate(casualties = FATALITIES + INJURIES) %>%
+# Calculation of casualty value as fatalities + 0.2*injuries (arbitrary)
+storm_cas <- storm %>%
+    mutate(casualties = FATALITIES + 0.2*INJURIES
+           , casualties=ceiling(casualties)
+           )
+
+# Calculating casualty values by event type
+cas_evtype <- storm_cas %>%
     group_by(EVTYPE) %>%
     summarise(cas_sum = sum(casualties)
               , fat_sum = sum(FATALITIES)
               , inj_sum = sum(INJURIES)
-              ) %>%
+              , ev_n = n()
+              , cas_per_event = cas_sum/n()) %>%
     arrange(desc(cas_sum)) 
 
-# Listing top 10 / top 20 events
-top10 <- slice(storm_fat, 2:10) 
-top20 <- slice(storm_fat, 2:20)
-
+# Printing top 20 events as html with with xtable
 library(xtable)
-print(xtable(top20),type="html") 
+cas <- head(cas_evtype, 20)
+xt <- xtable(cas)
+names(xt) <- c("Event type", "Total casualties", "Total Fatalities", "Total injuries"
+               , "Number of events", "Casualties per event")
+print(xt, type="html")
 
-library(ggplot2)
-ggplot(top10, aes(y=cas_sum, x=EVTYPE, fill=EVTYPE)) +
-    theme(legend.position="bottom"
-          , axis.text.x = element_blank()
-          ) + 
-    labs(title="Top 10 events by total casualty count"
-         , x = "Event Type"
-         , y = "Total casualties" ) + 
-    scale_fill_brewer(palette="Blues") + 
-    geom_bar(stat="identity")
+# 2. Across the United States, which types of events have the greatest economic 
+# consequences?
 
-ggplot(top20, aes(x=inj_sum, y=fat_sum, color=EVTYPE)) + 
-    scale_fill_brewer(palette="Blues") + 
-    geom_point()
+
