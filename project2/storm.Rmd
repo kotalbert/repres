@@ -1,16 +1,16 @@
 ---
 title: "Impact of severe weather conditions in the USA"
+author: Pawel Daniluk
+date: 2016-11-03
 output:
-  html_document:
-    fig_caption: true
-    css: styles.css
+  html_document
 ---
 
 ## Synopsis
 This report summarizes analysis of impact of severe weather conditions on public
 health and property damage caused by severe weather conditions.
 
-The analysis is based on U.S. National Oceanic and Atmospheric Administration's (NOAA) storm database, as of 2007.
+The analysis is based on U.S. National Oceanic and Atmospheric Administration's (NOAA) storm database, as of November 2011.
 
 The dataset is available for [download](https://d396qusza40orc.cloudfront.net/repdata%2Fdata%2FStormData.csv.bz2). 
 
@@ -19,11 +19,11 @@ Complete [documentation](https://d396qusza40orc.cloudfront.net/repdata%2Fpeer2_d
 ## Loading raw data
 Compressed data set is downloaded and read into data frame object. For improved performance, data data is being prevented from downloading if already present in the working directory. Decompressed data is stored in working directory as RDat file, to be loaded into memory as needed. 
 
-```{r}
+```{r, get_data}
 if (!dir.exists("./data/")) {
 
     dir.create("./data/")
-
+    # Downloading data and documentation
     surl <- "https://d396qusza40orc.cloudfront.net/repdata%2Fdata%2FStormData.csv.bz2"
     durl <- "https://d396qusza40orc.cloudfront.net/repdata%2Fpeer2_doc%2Fpd01016005curr.pdf"
     furl <- "https://d396qusza40orc.cloudfront.net/repdata%2Fpeer2_doc%2FNCDC%20Storm%20Events-FAQ%20Page.pdf"
@@ -46,10 +46,112 @@ if(!exists("storm"))
     load("./data/storm.RDat")
 ```
 ## Data description
+```{r, data_props, echo=FALSE}
+dims <- dim(storm)
+state_lev_no <- length(levels(storm$STATE))
+evtype_lev_no <-  length(levels(storm$EVTYPE))
+``` 
+The analysis set contains severe weather events, recorded between the year 1950 and November 2011. The Storm database contains `r dims[1]` rows and `r dims[2]` columns. The colums used for analysis are listed in the table below.
+
+| Column name 	| Type    	                    | Description      	|
+|-------------	|------------------                 |------------------	|
+| STATE     	| Factor: `r state_lev_no` levels   |                  	|
+| EVTYPE      	| Factor: `r evtype_lev_no` levels  |                  	|
+| FATALITIES  	| Numeric      	                    |                   |
+| INJURIES     	| Numeric    	                    |                   |
+| PROPDMG       | Numeric                           |               	|
+| PROPDMGEXP   	| Numeric                           |              	|
+| CROPDMG      	| Numeric                           |              	|
+| CROPDMGEXP    | Numeric                           |              	|
+
+Table: Description of selected variables
+
+Since there are `r state_lev_no` levels of EVTYPE varialbe, the output  of the analysis must be limited to be readable. Therefore only top 20 most severe categories will be reported.
+
+<!--
+#[1] "STATE__"    "BGN_DATE"   "BGN_TIME"   "TIME_ZONE"  "COUNTY"    
+#[6] "COUNTYNAME" "STATE"      "EVTYPE"     "BGN_RANGE"  "BGN_AZI"   
+#[11] "BGN_LOCATI" "END_DATE"   "END_TIME"   "COUNTY_END" "COUNTYENDN"
+#[16] "END_RANGE"  "END_AZI"    "END_LOCATI" "LENGTH"     "WIDTH"     
+#[21] "F"          "MAG"        "FATALITIES" "INJURIES"   "PROPDMG"   
+#[26] "PROPDMGEXP" "CROPDMG"    "CROPDMGEXP" "WFO"        "STATEOFFIC"
+#[31] "ZONENAMES"  "LATITUDE"   "LONGITUDE"  "LATITUDE_E" "LONGITUDE_"
+#[36] "REMARKS"    "REFNUM"
+--> 
 
 ## Research methodology
+This section describes assumptions made in the analysis.
 
+### Severity of health impact
+In order to measure impact of severe weather conditions on both population health and property damage, some measures must be established. Since both fatalities and injuries can be considered harmfull in regard to public health, those two variables should be included. 
 
-## Impact of severe weather events on public health 
+However, in the assessment of severity of extrene weather confition in regard to pulic health, fatalities and injuries should not be included with the same weights. For purpouse of this analysis, arbitraty weight of 20% is assumed, i.e. one fatality corresponds to five fatalities in assesing the event severity. Finally, a "CASUALTIES" measure is calculated as follows:
+```
+CASUALTIES = FATALITIES+.2*INJURIES
+```
+In addition, it might be informative, to calculate number of casualties per event to measure how destructive is each type of events.
 
-## Property damage  
+### Severity of economic impact
+
+## Data transformations
+In order to obtain severity measures calculated as described in the previous sections, the **dplyr** package is used.
+Firstly, the measures of health impact are calculated. The results are arranged in regard to casualties count.
+```{r, data_trans, warning=FALSE, message=FALSE}
+library(dplyr)
+storm <- tbl_df(storm)
+
+# Calculation of casualty value as fatalities + 0.2*injuries (arbitrary)
+storm_cas <- storm %>%
+    mutate(casualties = FATALITIES + 0.2*INJURIES
+           , casualties=ceiling(casualties)
+           )
+
+# Calculating casualty values by event type
+cas_evtype <- storm_cas %>%
+    group_by(EVTYPE) %>%
+    summarise(cas_sum = sum(casualties)
+              , fat_sum = sum(FATALITIES)
+              , inj_sum = sum(INJURIES)
+              , ev_n = n()
+              , cas_per_event = cas_sum/n()) %>%
+    arrange(desc(cas_sum)) 
+```
+The top most severe types of weather events in respect to public health are listed in the following table. 
+
+Printed with knirt:kable function to transform r output into markdown table.
+```{r health_table}
+# supress scientific notation in printed output
+options(scipen=999)
+
+library(knitr)
+cas <- head(cas_evtype, 20) 
+names(cas) <- c("Event type", "Total casualties", "Total Fatalities", "Total injuries"
+    , "Number of events", "Casualty rate")
+kable(cas,  digits=2, caption = "Top 20 event types most severe to public health")
+```
+
+Based on the gathered data, it appears, that Tornadoes are leading cause of casualties in the USA, resulting in overall `r cas[1,2]` fatalities, and `r cas[1,3]` injuries. The calculated casualties amounted to `r cas[1,4]`. It is interesting to note however, that although Tornadoes results in highest number of casualties, the actual casualty rate is modest `r cas[1,6]`. High position of Tornadoes result from high number of this type of events.  
+
+Interestingly, the most destructive event types, such as HURRICANE/TYPHOON (3.68 casualty rate), Heat and Excessive Heat (1.95 and 1.79 respectively) has relatively low impact on public health, because of their low frequency of occurrence.
+
+Finally, the results can be graphically presented in form of bar plot, created with **ggplot2** package.
+```{r, cas_plot, warning=FALSE, message=FALSE}
+# Transform data to horizontal format to produce barplot
+cas2 <- head(cas_evtype, 5)
+library(tidyr)
+cas_bar <- cas2 %>% 
+  rename(Casualties=cas_sum, Fatalities=fat_sum, Injuries=inj_sum) %>%
+  select(-c(ev_n, cas_per_event)) %>%
+  gather(Label, value, -EVTYPE)
+  
+# Barplot for top 5 event types
+
+library(ggplot2)
+ggplot(cas_bar, aes(x=EVTYPE, y=value,fill=Label)) +
+  labs(x="Event type", y="Sum", title="Severity of event type (Public Health)") + 
+  geom_bar(stat="identity", position="dodge")
+```
+
+## Assessment of impact on public health 
+
+## Assessment of property impact

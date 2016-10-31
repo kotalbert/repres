@@ -13,7 +13,7 @@ if (!dir.exists("./data/")) {
 
     surl <- "https://d396qusza40orc.cloudfront.net/repdata%2Fdata%2FStormData.csv.bz2"
     durl <- "https://d396qusza40orc.cloudfront.net/repdata%2Fpeer2_doc%2Fpd01016005curr.pdf"
-    furl <- "https://d396qusza40orc.cloudfront.net/repdata%2Fpeer2_doc%2FNCDC%20Storm%20Events-FAQ%20Page.pdf"
+    furl <- "httpsgit st://d396qusza40orc.cloudfront.net/repdata%2Fpeer2_doc%2FNCDC%20Storm%20Events-FAQ%20Page.pdf"
 
     download.file(surl, "./data/storm.bz2", mode="wb")
     download.file(durl, "./data/data_doc.pdf", mode="wb")
@@ -57,12 +57,20 @@ cas_evtype <- storm_cas %>%
     arrange(desc(cas_sum)) 
 
 # Printing top 20 events as html with with xtable
-library(xtable)
 cas <- head(cas_evtype, 20)
-xt <- xtable(cas)
-names(xt) <- c("Event type", "Total casualties", "Total Fatalities", "Total injuries"
-               , "Number of events", "Casualties per event")
-print(xt, type="html")
+
+# Transform data to horizontal format to produce barplot
+cas2 <- head(cas_evtype)
+library(tidyr)
+cas_bar <- cas2 %>% 
+  rename(Casualties=cas_sum, Fatalities=fat_sum, Injuries=inj_sum) %>%
+  select(-c(ev_n, cas_per_event)) %>%
+  gather(Label, value, -EVTYPE)
+  
+library(ggplot2)
+ggplot(cas_bar, aes(x=EVTYPE, y=value,fill=Label)) +
+  labs(x="Event type", y="Sum", title="Severity of event type (Public Health)") + 
+  geom_bar(stat="identity", position="dodge")
 
 # 2. Across the United States, which types of events have the greatest economic 
 # consequences?

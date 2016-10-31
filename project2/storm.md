@@ -8,7 +8,8 @@ output:
 
 ## Synopsis
 This report summarizes analysis of impact of severe weather conditions on public
-health and property damage caused by severe weather conditions.
+health and property damage caused by severe weather conditions. In particular, there are two research question to be adressed:
+
 
 The analysis is based on U.S. National Oceanic and Atmospheric Administration's (NOAA) storm database, as of 2007.
 
@@ -18,7 +19,6 @@ Complete [documentation](https://d396qusza40orc.cloudfront.net/repdata%2Fpeer2_d
 
 ## Loading raw data
 Compressed data set is downloaded and read into data frame object. For improved performance, data data is being prevented from downloading if already present in the working directory. Decompressed data is stored in working directory as RDat file, to be loaded into memory as needed. 
-
 
 ```r
 if (!dir.exists("./data/")) {
@@ -47,8 +47,9 @@ if(!exists("storm"))
     load("./data/storm.RDat")
 ```
 ## Data description
+The analysis set contains severe weather events, recorded between the year 1950 and November 2011.  
 
-## Research methodology
+## Research methodology and data transformations
 
 
 ## Impact of severe weather events on public health 
