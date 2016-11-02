@@ -75,4 +75,33 @@ ggplot(cas_bar, aes(x=EVTYPE, y=value,fill=Label)) +
 # 2. Across the United States, which types of events have the greatest economic 
 # consequences?
 
+# Using dplyr for data transformation and agregation
+library(dplyr)
+storm <- tbl_df(storm)
+storm_dmg <- storm %>% mutate(total_dmg = PROPDMG+CROPDMG)
 
+dmg_evtype <- storm_dmg %>%
+  group_by(EVTYPE) %>%
+  summarise(total_dmg_sum = sum(total_dmg)
+            , prop_dmg_sum = sum(PROPDMG)
+            , crop_dmg_sum = sum(CROPDMG)
+            , ev_n = n()
+            , exp_dmg = total_dmg_sum/ev_n
+            ) %>%
+  arrange(desc(total_dmg_sum)) 
+
+# Top events
+dmg <- head(dmg_evtype, 20)
+
+dmg2 <- head(dmg_evtype, 5)
+
+library(tidyr)
+dmg_bar <- dmg2 %>% 
+  rename(Total=total_dmg_sum, Property=prop_dmg_sum, Crop=crop_dmg_sum) %>%
+  select(-c(ev_n, exp_dmg)) %>%
+  gather(Label, value, -EVTYPE)
+
+library(ggplot2)
+ggplot(dmg_bar, aes(x=EVTYPE, y=value,fill=Label)) +
+  labs(x="Event type", y="Sum", title="Severity of event type (Property damage)") + 
+  geom_bar(stat="identity", position="dodge")
