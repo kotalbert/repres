@@ -11,7 +11,7 @@ output:
 This report summarizes analysis of impact of severe weather conditions on public
 health and property damage caused by severe weather conditions.
 
-The results suggest, that Tornadoes are the most severe types of events in terms of both impact on public health and property damage. The details of research methodology and results can be found in the following section of this report.
+The obtained  results suggest, that Tornadoes are the most severe types of weather events in terms of both impact on public health and property damage. The details of research methodology and results can be found in the following section of this report.
 
 The analysis is based on U.S. National Oceanic and Atmospheric Administration's (NOAA) storm database, as of November 2011.
 
@@ -28,7 +28,6 @@ As described in documentation, the dataset contains detailed records of:
 - Other significant meteorological events, such as record maximum or minimum temperatures or precipitation that occur in connection with another event. 
 
 ## Loading raw data
-
 Compressed data set is downloaded and read into data frame object. For improved performance, data data is being prevented from downloading if already present in the working directory. Decompressed data is stored in working directory as RDat file, to be loaded into memory as needed. 
 
 ```{r, get_data}
@@ -95,7 +94,7 @@ In order to calculate severity of extreme weather event in terms of economic imp
 
 The rationale behind this approach is that crop damage can be extensive in overall damage, but relatively small in monetary terms. 
 
-## Data transformations
+## Data Processing
 In order to obtain severity measures calculated as described in the previous sections, the **dplyr** package is used.
 The analysis also makes use of **tidyr**, for data transposition from vertical to horizontal format, required by barlopt routines in **ggplot2** library. Tables in this report are produced with **knitr:kable** function.
 Firstly, the measures of health impact are calculated. The results are arranged in regard to casualties count.
@@ -151,12 +150,15 @@ dmg_evtype <- storm_dmg %>%
             , exp_dmg = total_dmg_sum/ev_n
             )
 ```
-## Assessment of impact on public health 
+## Results
+This section is devoted to summary of performed data transformation and calculations. Assessment of weather impact on public health and property damage are discussed in the separate paragraphs.   
+
+### Assessment of impact on public health 
 The top 20 most severe types of weather events in respect to public health are listed in the following table. :
 
 Printed with knirt:kable function to transform r output into markdown table.
 ```{r health_table}
-# supress scientific notation in printed output
+# suppress scientific notation in printed output
 options(scipen=999)
 cas <- head(cas_evtype, 20) 
 names(cas) <- c("Event type", "Total casualties", "Total Fatalities", "Total injuries"
@@ -175,7 +177,7 @@ ggplot(cas_bar, aes(x=EVTYPE, y=value,fill=Label)) +
   geom_bar(stat="identity", position="dodge")
 ```
 
-## Assessment of property impact
+### Assessment of property impact
 The economic impact of severe weather conditions are measured both in terms of property damage as well as crop damage. 
 In order to produce meaningful output, the aggregate damage values are arranged and then printed in form of tables.  
 
