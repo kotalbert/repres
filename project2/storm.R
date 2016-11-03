@@ -87,21 +87,39 @@ dmg_evtype <- storm_dmg %>%
             , crop_dmg_sum = sum(CROPDMG)
             , ev_n = n()
             , exp_dmg = total_dmg_sum/ev_n
-            ) %>%
-  arrange(desc(total_dmg_sum)) 
+            )
 
-# Top events
-dmg <- head(dmg_evtype, 20)
+# Economic impact
 
-dmg2 <- head(dmg_evtype, 5)
+dmg_prop <- arrange(dmg_evtype, desc(prop_dmg_sum))
+dmg_crop <- arrange(dmg_evtype, desc(crop_dmg_sum))
 
-library(tidyr)
-dmg_bar <- dmg2 %>% 
-  rename(Total=total_dmg_sum, Property=prop_dmg_sum, Crop=crop_dmg_sum) %>%
-  select(-c(ev_n, exp_dmg)) %>%
-  gather(Label, value, -EVTYPE)
+top_prop <- head(dmg_prop, 10)
+top_crop <- head(dmg_crop, 10)
+
+
+nms <- c("Event type", "Total damage", "Property damage", "Crop damage"
+                     , "Number of events", "Total damage per event")
+  
+names(top_prop) <- nms
+names(top_crop) <- nms
+
+library(knitr)
+
+kable(top_prop,  digits=2, caption = "Top 10 event types causing most property damage")
+kable(top_crop,  digits=2, caption = "Top 10 event types causing most crop damage")
 
 library(ggplot2)
-ggplot(dmg_bar, aes(x=EVTYPE, y=value,fill=Label)) +
-  labs(x="Event type", y="Sum", title="Severity of event type (Property damage)") + 
-  geom_bar(stat="identity", position="dodge")
+options(scipen=999)
+ggplot(head(dmg_prop, 5), aes(x=EVTYPE, y=prop_dmg_sum, fill=EVTYPE)) + 
+  labs(x="Event type", y="Value", title="Property damage") + 
+  geom_bar(stat="identity", position="dodge") + 
+  theme(axis.text.x=element_blank())
+
+ggplot(head(dmg_crop, 5), aes(x=EVTYPE, y=crop_dmg_sum, fill=EVTYPE)) + 
+  labs(x="Event type", y="Value", title="Crop damage") + 
+  geom_bar(stat="identity", position="dodge") + 
+  theme(axis.text.x=element_blank())
+
+
+

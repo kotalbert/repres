@@ -3,12 +3,15 @@ title: "Impact of severe weather conditions in the USA"
 author: Pawel Daniluk
 date: 2016-11-03
 output:
-  html_document
+  html_document:
+  keep_md: true
 ---
 
 ## Synopsis
 This report summarizes analysis of impact of severe weather conditions on public
 health and property damage caused by severe weather conditions.
+
+The results suggest, that Tornadoes are the most severe types of events in terms of both impact on public health and property damage. The details of research methodology and results can be found in the following section of this report.
 
 The analysis is based on U.S. National Oceanic and Atmospheric Administration's (NOAA) storm database, as of November 2011.
 
@@ -84,6 +87,7 @@ However, in the assessment of severity of extrene weather confition in regard to
 ```
 CASUALTIES = FATALITIES+.2*INJURIES
 ```
+
 In addition, it might be informative, to calculate number of casualties per event to measure how destructive is each type of events.
 
 ### Severity of economic impact
@@ -93,13 +97,16 @@ The rationale behind this approach is that crop damage can be extensive in overa
 
 ## Data transformations
 In order to obtain severity measures calculated as described in the previous sections, the **dplyr** package is used.
+The analysis also makes use of **tidyr**, for data transposition from vertical to horizontal format, required by barlopt routines in **ggplot2** library. Tables in this report are produced with **knitr:kable** function.
 Firstly, the measures of health impact are calculated. The results are arranged in regard to casualties count.
+
 ```{r, load_data, echo=FALSE, warning=FALSE, message=FALSE}
 # Load data to dplyr table for transformation
-# Loading required packages (dplyr, tidyr, ggplot2)
+# Loading required packages (dplyr, tidyr, ggplot2, knitr)
 library(dplyr)
 library(tidyr)
 library(ggplot2)
+library(knitr)
 storm <- tbl_df(storm)
 ```
 
@@ -120,9 +127,10 @@ cas_evtype <- storm_cas %>%
               , cas_per_event = cas_sum/n()) %>%
     arrange(desc(cas_sum)) 
 ```
-In order to draw required barplot, data frame need to be transposed with **tidyr** package function **gather**. 
-Top 5 
+In order to draw barplot, comparing fatalities and injuries for each type of event, data need to be transposed with **tidyr** package function **gather**. 
+
 ```{r, cas_gather}
+# Transform data to horizontal format to produce barplot
 cas_bar <- head(cas_evtype,5) %>% 
   rename(Casualties=cas_sum, Fatalities=fat_sum, Injuries=inj_sum) %>%
   select(-c(ev_n, cas_per_event)) %>%
@@ -132,18 +140,24 @@ cas_bar <- head(cas_evtype,5) %>%
 The property and crop damage will be calculated in the similar fashion, as shown in the following code listing.
 
 ```{r, dmg_data_trans}
+storm_dmg <- storm %>% mutate(total_dmg = PROPDMG+CROPDMG)
 
+dmg_evtype <- storm_dmg %>%
+  group_by(EVTYPE) %>%
+  summarise(total_dmg_sum = sum(total_dmg)
+            , prop_dmg_sum = sum(PROPDMG)
+            , crop_dmg_sum = sum(CROPDMG)
+            , ev_n = n()
+            , exp_dmg = total_dmg_sum/ev_n
+            )
 ```
-
 ## Assessment of impact on public health 
-The top most severe types of weather events in respect to public health are listed in the following table. :
+The top 20 most severe types of weather events in respect to public health are listed in the following table. :
 
 Printed with knirt:kable function to transform r output into markdown table.
 ```{r health_table}
 # supress scientific notation in printed output
 options(scipen=999)
-
-library(knitr)
 cas <- head(cas_evtype, 20) 
 names(cas) <- c("Event type", "Total casualties", "Total Fatalities", "Total injuries"
     , "Number of events", "Casualty rate")
@@ -156,18 +170,55 @@ Interestingly, the most destructive event types, such as HURRICANE/TYPHOON (3.68
 
 Finally, the results can be graphically presented in form of bar plot, created with **ggplot2** package.
 ```{r, cas_plot, warning=FALSE, message=FALSE}
-# Transform data to horizontal format to produce barplot
-cas2 <- head(cas_evtype, 5)
-library(tidyr)
-
-  
-# Barplot for top 5 event types
-
-library(ggplot2)
 ggplot(cas_bar, aes(x=EVTYPE, y=value,fill=Label)) +
   labs(x="Event type", y="Sum", title="Severity of event type (Public Health)") + 
   geom_bar(stat="identity", position="dodge")
 ```
 
-
 ## Assessment of property impact
+The economic impact of severe weather conditions are measured both in terms of property damage as well as crop damage. 
+In order to produce meaningful output, the aggregate damage values are arranged and then printed in form of tables.  
+
+```{r, dmg_sort}
+# arrange output by property/crop damage
+dmg_prop <- arrange(dmg_evtype, desc(prop_dmg_sum))
+dmg_crop <- arrange(dmg_evtype, desc(crop_dmg_sum))
+
+top_prop <- head(dmg_prop, 10)
+top_crop <- head(dmg_crop, 10)
+
+# Apply proper names to output tables
+nms <- c("Event type", "Total damage", "Property damage", "Crop damage"
+                     , "Number of events", "Total damage per event")
+  
+names(top_prop) <- nms
+names(top_crop) <- nms
+```
+
+The following table summarize the 10 most severe event types in terms of property damage. It can be noted, that Tornadoes are causing most property damage, aside from having the most serious impact on public health as discussed in previous paragraphs.
+```{r}
+kable(top_prop,  digits=2, caption = "Top 10 event types causing most property damage")
+```
+
+The following barplot displays following 4 types of events with highest property damage values. 
+
+```{r}
+ggplot(head(dmg_prop, 5), aes(x=EVTYPE, y=prop_dmg_sum, fill=EVTYPE)) + 
+  labs(x="Event type", y="Value", title="Property damage") + 
+  geom_bar(stat="identity", position="dodge") + 
+  theme(axis.text.x=element_blank())
+```
+
+Similarly, the crop damage, can be summarized in the following table and barplot. Apparently, Hail is causing the highest crop damage. It is noteworthy however, that Tornadoes is among top 5 event types.
+
+```{r}
+kable(top_crop,  digits=2, caption = "Top 10 event types causing most crop damage")
+```
+
+```{r}
+ggplot(head(dmg_crop, 5), aes(x=EVTYPE, y=crop_dmg_sum, fill=EVTYPE)) + 
+  labs(x="Event type", y="Value", title="Crop damage") + 
+  geom_bar(stat="identity", position="dodge") + 
+  theme(axis.text.x=element_blank())
+
+```
